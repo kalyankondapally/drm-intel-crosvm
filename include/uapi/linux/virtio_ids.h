@@ -50,5 +50,6 @@
 #define VIRTIO_ID_MAC80211_HWSIM 29 /* virtio mac80211-hwsim */
 #define VIRTIO_ID_VIDEO_ENC    30 /* virtio video encoder */
 #define VIRTIO_ID_VIDEO_DEC    31 /* virtio video decoder */
+#define VIRTIO_ID_WL           32 /* virtio wayland */
 
 #endif /* _LINUX_VIRTIO_IDS_H */
