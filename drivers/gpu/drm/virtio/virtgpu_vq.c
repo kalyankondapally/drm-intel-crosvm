@@ -1015,7 +1015,7 @@ static void virtio_gpu_cmd_resource_create_cb(struct virtio_gpu_device *vgdev,
 
 finish_pending:
 	obj->create_callback_done = true;
-	drm_gem_object_put_unlocked(&obj->base.base);
+	drm_gem_object_put(&obj->base.base);
 	wake_up_all(&vgdev->resp_wq);
 }
 
