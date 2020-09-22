@@ -233,6 +233,9 @@ struct virtio_gpu_device {
 
 	/* protects resource state when exporting */
 	spinlock_t resource_export_lock;
+	
+	struct idr request_idr;
+	spinlock_t request_idr_lock;
 };
 
 struct virtio_gpu_fpriv {
