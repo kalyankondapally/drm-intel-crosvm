@@ -1,0 +1,77 @@
+From 15a079cdb9ffa62c8f420b66226aa19742cc325d Mon Sep 17 00:00:00 2001
+From: Guenter Roeck <groeck@chromium.org>
+Date: Tue, 2 Jun 2020 07:34:11 -0700
+Subject: [PATCH 27/61] FIXUP: BACKPORT: FROMLIST: virtio_video: Add the Virtio
+ Video V4L2 driver
+
+0-day reports:
+
+drivers/media/virtio/virtio_video_device.c:1188:6: error:
+	no previous prototype for 'virtio_video_device_destroy'
+drivers/media/virtio/virtio_video_helpers.c:188:10: error:
+	no previous prototype for 'virtio_video_get_format_from_virtio_profile'
+
+Somewhat guessing here, virtio_video_device_destroy() is only called
+locally and thus marked static.
+virtio_video_get_format_from_virtio_profile() is not called at all and
+presumably intended to be used as helper function. Removed this function,
+as the conversion from a profile to a format doesn't make much sense.
+If we need a V4L2 format, we should virtio_video_format_to_v4l2 instead.
+
+BUG=b:120456557, b:151703605
+TEST=compile with VIRTIO_VIDEO enabled
+
+Change-Id: I02d577f8e9b1a65cbbe9877391f8f755a474fc78
+Signed-off-by: Guenter Roeck <groeck@chromium.org>
+Signed-off-by: Keiichi Watanabe <keiichiw@chromium.org>
+Reviewed-on: https://chromium-review.googlesource.com/c/chromiumos/third_party/kernel/+/2226628
+---
+ drivers/media/virtio/virtio_video_device.c  |  2 +-
+ drivers/media/virtio/virtio_video_helpers.c | 18 ------------------
+ 2 files changed, 1 insertion(+), 19 deletions(-)
+
+diff --git a/drivers/media/virtio/virtio_video_device.c b/drivers/media/virtio/virtio_video_device.c
+index da78cf2070a9..14b58f14d315 100644
+--- a/drivers/media/virtio/virtio_video_device.c
++++ b/drivers/media/virtio/virtio_video_device.c
+@@ -1185,7 +1185,7 @@ virtio_video_device_create(struct virtio_video *vv)
+ 	return ERR_CAST(m2m_dev);
+ }
+ 
+-void virtio_video_device_destroy(struct virtio_video_device *vvd)
++static void virtio_video_device_destroy(struct virtio_video_device *vvd)
+ {
+ 	if (!vvd)
+ 		return;
+diff --git a/drivers/media/virtio/virtio_video_helpers.c b/drivers/media/virtio/virtio_video_helpers.c
+index bc4754e7ca78..13fcd0ddf689 100644
+--- a/drivers/media/virtio/virtio_video_helpers.c
++++ b/drivers/media/virtio/virtio_video_helpers.c
+@@ -185,24 +185,6 @@ uint32_t virtio_video_v4l2_control_to_virtio(uint32_t v4l2_control)
+ 	return 0;
+ }
+ 
+-uint32_t virtio_video_get_format_from_virtio_profile(uint32_t virtio_profile)
+-{
+-	if (virtio_profile >= VIRTIO_VIDEO_PROFILE_H264_MIN &&
+-	    virtio_profile <= VIRTIO_VIDEO_PROFILE_H264_MAX)
+-		return VIRTIO_VIDEO_FORMAT_H264;
+-	else if (virtio_profile >= VIRTIO_VIDEO_PROFILE_HEVC_MIN &&
+-		 virtio_profile <= VIRTIO_VIDEO_PROFILE_HEVC_MAX)
+-		return VIRTIO_VIDEO_FORMAT_HEVC;
+-	else if (virtio_profile >= VIRTIO_VIDEO_PROFILE_VP8_MIN &&
+-		 virtio_profile <= VIRTIO_VIDEO_PROFILE_VP8_MAX)
+-		return VIRTIO_VIDEO_FORMAT_VP8;
+-	else if (virtio_profile >= VIRTIO_VIDEO_PROFILE_VP9_MIN &&
+-		 virtio_profile <= VIRTIO_VIDEO_PROFILE_VP9_MAX)
+-		return VIRTIO_VIDEO_FORMAT_VP9;
+-
+-	return 0;
+-}
+-
+ struct video_format *find_video_format(struct list_head *fmts_list,
+ 				       uint32_t format)
+ {
+-- 
+2.25.1
+

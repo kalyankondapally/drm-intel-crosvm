@@ -1,0 +1,91 @@
+From 51db7308854aff36171f9bcd06617b42dad7f3e2 Mon Sep 17 00:00:00 2001
+From: Gurchetan Singh <gurchetansingh@chromium.org>
+Date: Mon, 6 May 2019 09:41:32 -0700
+Subject: [PATCH 12/61] CHROMIUM: drm/virtgpu: add memory type to
+ virtio_gpu_object_params
+
+This will allow us to distinguish between host-coherent and guest
+memory.
+
+BUG=chromium:924405
+TEST=compile
+
+Change-Id: I715db06be9bba9d14e5f47ba4a2f9693c09a62fa
+Reviewed-on: https://chromium-review.googlesource.com/c/chromiumos/third_party/kernel/+/1629913
+Reviewed-by: Robert Tarasov <tutankhamen@chromium.org>
+Commit-Queue: Gurchetan Singh <gurchetansingh@chromium.org>
+Tested-by: Gurchetan Singh <gurchetansingh@chromium.org>
+---
+ drivers/gpu/drm/virtio/virtgpu_drv.h    | 9 +++++++++
+ drivers/gpu/drm/virtio/virtgpu_gem.c    | 5 +++--
+ drivers/gpu/drm/virtio/virtgpu_object.c | 3 +++
+ 3 files changed, 15 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/gpu/drm/virtio/virtgpu_drv.h b/drivers/gpu/drm/virtio/virtgpu_drv.h
+index b230de6b10f5..0afb31225cfb 100644
+--- a/drivers/gpu/drm/virtio/virtgpu_drv.h
++++ b/drivers/gpu/drm/virtio/virtgpu_drv.h
+@@ -57,6 +57,9 @@ struct virtio_gpu_object_params {
+ 	bool dumb;
+ 	/* 3d */
+ 	bool virgl;
++	bool resource_v2;
++	enum virtio_gpu_memory_type guest_memory_type;
++	enum virtio_gpu_caching_type caching_type;
+ 	uint32_t target;
+ 	uint32_t bind;
+ 	uint32_t depth;
+@@ -76,7 +79,13 @@ struct virtio_gpu_object {
+ 	uint32_t strides[4];
+ 	uint32_t offsets[4];
+ 	bool dumb;
++	bool resource_v2;
+ 	bool created;
++	enum virtio_gpu_memory_type guest_memory_type;
++	enum virtio_gpu_caching_type caching_type;
++
++	int uuid_state;
++	uuid_t uuid;
+ };
+ #define gem_to_virtio_gpu_obj(gobj) \
+ 	container_of((gobj), struct virtio_gpu_object, base.base)
+diff --git a/drivers/gpu/drm/virtio/virtgpu_gem.c b/drivers/gpu/drm/virtio/virtgpu_gem.c
+index 1148c487e54a..9599c49c1f2b 100644
+--- a/drivers/gpu/drm/virtio/virtgpu_gem.c
++++ b/drivers/gpu/drm/virtio/virtgpu_gem.c
+@@ -116,7 +116,8 @@ int virtio_gpu_gem_object_open(struct drm_gem_object *obj,
+ 	struct virtio_gpu_fpriv *vfpriv = file->driver_priv;
+ 	struct virtio_gpu_object_array *objs;
+ 
+-	if (!vgdev->has_virgl_3d || !qobj->hw_res_handle)
++	if (!vgdev->has_virgl_3d || !qobj->hw_res_handle ||
++            qobj->resource_v2)
+ 		goto out_notify;
+ 
+ 	objs = virtio_gpu_array_alloc(1);
+@@ -138,7 +139,7 @@ void virtio_gpu_gem_object_close(struct drm_gem_object *obj,
+ 	struct virtio_gpu_fpriv *vfpriv = file->driver_priv;
+ 	struct virtio_gpu_object_array *objs;
+ 
+-	if (!vgdev->has_virgl_3d)
++	if (!vgdev->has_virgl_3d || qobj->resource_v2)
+ 		return;
+ 
+ 	objs = virtio_gpu_array_alloc(1);
+diff --git a/drivers/gpu/drm/virtio/virtgpu_object.c b/drivers/gpu/drm/virtio/virtgpu_object.c
+index c05b41e92546..0365ac0e6481 100644
+--- a/drivers/gpu/drm/virtio/virtgpu_object.c
++++ b/drivers/gpu/drm/virtio/virtgpu_object.c
+@@ -222,6 +222,9 @@ int virtio_gpu_object_create(struct virtio_gpu_device *vgdev,
+ 		goto err_free_gem;
+ 
+ 	bo->dumb = params->dumb;
++	bo->resource_v2 = params->resource_v2;
++	bo->guest_memory_type = params->guest_memory_type;
++	bo->caching_type = params->caching_type;
+ 
+ 	if (fence) {
+ 		ret = -ENOMEM;
+-- 
+2.25.1
+

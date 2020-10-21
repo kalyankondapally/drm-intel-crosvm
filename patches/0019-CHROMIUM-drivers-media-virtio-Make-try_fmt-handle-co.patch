@@ -1,0 +1,41 @@
+From c7f0e4bd8281cbf23b96b0dddc7b1c3aa70bcd78 Mon Sep 17 00:00:00 2001
+From: Keiichi Watanabe <keiichiw@chromium.org>
+Date: Tue, 17 Mar 2020 19:48:23 +0900
+Subject: [PATCH 19/61] CHROMIUM: drivers: media: virtio: Make try_fmt handle
+ coded formats containing frame sizes in stream
+
+Some coded format streams like VP8 and H.264 contain metadata.
+For such formats, try_fmt is called with width=0 and height=0.
+This CL makes try_fmt callback support this case.
+
+BUG=b:151703605
+TEST=compile
+
+Change-Id: I7a950f52c0ffdba0aba9febdc10f11e640d347ed
+Signed-off-by: Keiichi Watanabe <keiichiw@chromium.org>
+Reviewed-on: https://chromium-review.googlesource.com/c/chromiumos/third_party/kernel/+/2107043
+Reviewed-by: Alexandre Courbot <acourbot@chromium.org>
+---
+ drivers/media/virtio/virtio_video_device.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/drivers/media/virtio/virtio_video_device.c b/drivers/media/virtio/virtio_video_device.c
+index 2b91def8a2f2..6fa013bfb472 100644
+--- a/drivers/media/virtio/virtio_video_device.c
++++ b/drivers/media/virtio/virtio_video_device.c
+@@ -416,6 +416,12 @@ int virtio_video_try_fmt(struct virtio_video_stream *stream,
+ 		return 0;
+ 	}
+ 
++	/* For coded formats whose metadata are in steram */
++	if (pix_mp->width == 0 && pix_mp->height == 0)  {
++		stream->current_frame = &fmt->frames[0];
++		return 0;
++	}
++
+ 	for (i = 0; i < fmt->desc.num_frames && !found; i++) {
+ 		frm = &fmt->frames[i];
+ 		frame = &frm->frame;
+-- 
+2.25.1
+

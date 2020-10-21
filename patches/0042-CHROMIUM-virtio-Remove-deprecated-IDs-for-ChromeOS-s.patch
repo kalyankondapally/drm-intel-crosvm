@@ -1,0 +1,55 @@
+From cd8513877b848d0d026d68fedc2d8b65ba28246a Mon Sep 17 00:00:00 2001
+From: Keiichi Watanabe <keiichiw@chromium.org>
+Date: Tue, 28 Jan 2020 20:09:43 +0900
+Subject: [PATCH 42/61] CHROMIUM: virtio: Remove deprecated IDs for
+ ChromeOS-specific devices
+
+(Cherry-pick from CL:2024136)
+
+BUG=chromium:1031512
+TEST=/dev/wl0 exists on ARCVM with CL:2025127
+
+Cq-Depend: chromium:2025127
+Change-Id: I2eed6ecb1c6f48bdc4d6b76b47eefaa58d6a1bb8
+Signed-off-by: Keiichi Watanabe <keiichiw@chromium.org>
+Reviewed-on: https://chromium-review.googlesource.com/c/chromiumos/third_party/kernel/+/2026775
+Reviewed-by: Fergus Dall <sidereal@google.com>
+Reviewed-by: Stephen Barber <smbarber@chromium.org>
+Commit-Queue: Fergus Dall <sidereal@google.com>
+---
+ drivers/char/tpm/tpm_virtio.c | 5 -----
+ drivers/virtio/virtio_wl.c    | 2 --
+ 2 files changed, 7 deletions(-)
+
+diff --git a/drivers/char/tpm/tpm_virtio.c b/drivers/char/tpm/tpm_virtio.c
+index dc9e7bdcf413..079a066182f2 100644
+--- a/drivers/char/tpm/tpm_virtio.c
++++ b/drivers/char/tpm/tpm_virtio.c
+@@ -440,11 +440,6 @@ static void vtpm_remove(struct virtio_device *vdev)
+ }
+ 
+ static struct virtio_device_id id_table[] = {
+-	/* TODO(crbug.com/1031512): Remove once crosvm is updated */
+-	{
+-		.device = VIRTIO_ID_TPM_LEGACY,
+-		.vendor = VIRTIO_DEV_ANY_ID,
+-	},
+ 	{
+ 		.device = VIRTIO_ID_TPM,
+ 		.vendor = VIRTIO_DEV_ANY_ID,
+diff --git a/drivers/virtio/virtio_wl.c b/drivers/virtio/virtio_wl.c
+index 80cf799bed46..70e9b491394b 100644
+--- a/drivers/virtio/virtio_wl.c
++++ b/drivers/virtio/virtio_wl.c
+@@ -1456,8 +1456,6 @@ static void virtwl_scan(struct virtio_device *vdev)
+ }
+ 
+ static struct virtio_device_id id_table[] = {
+-	/* TODO(crbug.com/1031512): Remove once crosvm is updated */
+-	{ VIRTIO_ID_WL_LEGACY, VIRTIO_DEV_ANY_ID },
+ 	{ VIRTIO_ID_WL, VIRTIO_DEV_ANY_ID },
+ 	{ 0 },
+ };
+-- 
+2.25.1
+

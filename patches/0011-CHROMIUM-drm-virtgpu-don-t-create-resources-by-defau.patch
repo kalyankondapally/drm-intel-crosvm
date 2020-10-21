@@ -1,0 +1,37 @@
+From 6dfb4f4b211d9440f9beda1b34cb6774d2bb15d3 Mon Sep 17 00:00:00 2001
+From: Gurchetan Singh <gurchetansingh@chromium.org>
+Date: Tue, 7 May 2019 10:58:23 -0700
+Subject: [PATCH 11/61] CHROMIUM: drm/virtgpu: don't create resources by
+ default
+
+We only want call the resource_create_3d or resource_create_2d
+when needed.
+
+BUG=chromium:924405
+TEST=compile
+
+Change-Id: Ie9a9811c7d323498a9d498e00ee3022f939f437c
+Reviewed-on: https://chromium-review.googlesource.com/c/chromiumos/third_party/kernel/+/1629912
+Reviewed-by: Robert Tarasov <tutankhamen@chromium.org>
+Commit-Queue: Gurchetan Singh <gurchetansingh@chromium.org>
+Tested-by: Gurchetan Singh <gurchetansingh@chromium.org>
+---
+ drivers/gpu/drm/virtio/virtgpu_object.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/gpu/drm/virtio/virtgpu_object.c b/drivers/gpu/drm/virtio/virtgpu_object.c
+index 29cf152ca61f..c05b41e92546 100644
+--- a/drivers/gpu/drm/virtio/virtgpu_object.c
++++ b/drivers/gpu/drm/virtio/virtgpu_object.c
+@@ -238,7 +238,7 @@ int virtio_gpu_object_create(struct virtio_gpu_device *vgdev,
+ 	if (params->virgl) {
+ 		virtio_gpu_cmd_resource_create_3d(vgdev, bo, params,
+ 						  objs, fence);
+-	} else {
++	} else if (params->dumb) {
+ 		virtio_gpu_cmd_create_resource(vgdev, bo, params,
+ 					       objs, fence);
+ 	}
+-- 
+2.25.1
+

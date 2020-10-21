@@ -1,0 +1,45 @@
+From 3ec3ea931133f8b5e31eeaa82e1deb469bcb75eb Mon Sep 17 00:00:00 2001
+From: Zach Reizner <zachr@google.com>
+Date: Mon, 25 Sep 2017 16:22:19 -0700
+Subject: [PATCH 08/61] CHROMIUM: drm/virtio: prevent attaching resources with
+ no id
+
+During dumb buffer creation, a GEM object is created and associated with
+a resource before it has been allocated an ID. This is caused by creating a
+GEM object which calls the gem object open handler. In virtgpu,
+virtio_gpu_gem_object_open attempts to associate the GEM object's resource ID,
+which does not exist, with the context.
+
+This change checks first that the resource ID is valid before attaching
+it to the context. The virtio_gpu_mode_dumb_create works as expected by
+calling virtio_gpu_object_attach after creating an ID.
+
+Change-Id: I033f9c08c529b9908c79f1734ee16a2a749f801c
+Signed-off-by: Zach Reizner <zachr@google.com>
+Reviewed-on: https://chromium-review.googlesource.com/683374
+Commit-Ready: Zach Reizner <zachr@chromium.org>
+Tested-by: Zach Reizner <zachr@chromium.org>
+Reviewed-by: Joe Kniss <djmk@google.com>
+Reviewed-on: https://chromium-review.googlesource.com/780813
+Commit-Ready: Dylan Reid <dgreid@chromium.org>
+Tested-by: Dylan Reid <dgreid@chromium.org>
+---
+ drivers/gpu/drm/virtio/virtgpu_gem.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/gpu/drm/virtio/virtgpu_gem.c b/drivers/gpu/drm/virtio/virtgpu_gem.c
+index c30c75ee83fc..1148c487e54a 100644
+--- a/drivers/gpu/drm/virtio/virtgpu_gem.c
++++ b/drivers/gpu/drm/virtio/virtgpu_gem.c
+@@ -116,7 +116,7 @@ int virtio_gpu_gem_object_open(struct drm_gem_object *obj,
+ 	struct virtio_gpu_fpriv *vfpriv = file->driver_priv;
+ 	struct virtio_gpu_object_array *objs;
+ 
+-	if (!vgdev->has_virgl_3d)
++	if (!vgdev->has_virgl_3d || !qobj->hw_res_handle)
+ 		goto out_notify;
+ 
+ 	objs = virtio_gpu_array_alloc(1);
+-- 
+2.25.1
+

@@ -1,0 +1,46 @@
+From 81f9a1563ad9c516e71f0d0c81201d9ebdb78b73 Mon Sep 17 00:00:00 2001
+From: Gerd Hoffmann <kraxel@redhat.com>
+Date: Tue, 8 Sep 2020 09:07:23 +0200
+Subject: [PATCH 07/61] drm/virtio: add virtio_gpu_cmd_unref_resource error
+ handling
+
+Usually we wait for the host to complete the unref request, then cleanup
+the guest-side state of the object in the completion callback.  When
+submitting the unref command failed the completion callback will not be
+called though, so cleanup right away.
+
+Fixes a WARN on stale mm entries on driver shutdown.
+
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+Reviewed-by: Gurchetan Singh <gurchetansingh@chromium.org>
+Link: http://patchwork.freedesktop.org/patch/msgid/20200908070723.6394-4-kraxel@redhat.com
+---
+ drivers/gpu/drm/virtio/virtgpu_vq.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/gpu/drm/virtio/virtgpu_vq.c b/drivers/gpu/drm/virtio/virtgpu_vq.c
+index 5205ec695b14..004394bfd2b3 100644
+--- a/drivers/gpu/drm/virtio/virtgpu_vq.c
++++ b/drivers/gpu/drm/virtio/virtgpu_vq.c
+@@ -536,6 +536,7 @@ void virtio_gpu_cmd_unref_resource(struct virtio_gpu_device *vgdev,
+ {
+ 	struct virtio_gpu_resource_unref *cmd_p;
+ 	struct virtio_gpu_vbuffer *vbuf;
++	int ret;
+ 
+ 	cmd_p = virtio_gpu_alloc_cmd_cb(vgdev, &vbuf, sizeof(*cmd_p),
+ 					virtio_gpu_cmd_unref_cb);
+@@ -545,7 +546,9 @@ void virtio_gpu_cmd_unref_resource(struct virtio_gpu_device *vgdev,
+ 	cmd_p->resource_id = cpu_to_le32(bo->hw_res_handle);
+ 
+ 	vbuf->resp_cb_data = bo;
+-	virtio_gpu_queue_ctrl_buffer(vgdev, vbuf);
++	ret = virtio_gpu_queue_ctrl_buffer(vgdev, vbuf);
++	if (ret < 0)
++		virtio_gpu_cleanup_object(bo);
+ }
+ 
+ void virtio_gpu_cmd_set_scanout(struct virtio_gpu_device *vgdev,
+-- 
+2.25.1
+

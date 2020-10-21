@@ -1,0 +1,107 @@
+From 13229dd79d90620bdbf2ddb34b378ed3b848e06b Mon Sep 17 00:00:00 2001
+From: Guenter Roeck <groeck@chromium.org>
+Date: Sun, 24 May 2020 09:00:05 -0700
+Subject: [PATCH 26/61] FIXUP: BACKPORT: FROMLIST: virtio_video: Add the Virtio
+ Video V4L2 driver
+
+0-day reports:
+
+drivers/media/virtio/virtio_video_dec.c:156:5: warning:
+	no previous prototype for 'virtio_video_dec_init_ctrls'
+drivers/media/virtio/virtio_video_dec.c:177:5: warning:
+	no previous prototype for 'virtio_video_dec_init_queues'
+drivers/media/virtio/virtio_video_dec.c:335:5: warning:
+	no previous prototype for 'virtio_video_dec_enum_fmt_vid_out'
+drivers/media/virtio/virtio_video_dec.c:417:5: warning:
+	no previous prototype for 'virtio_video_dec_init'
+drivers/media/virtio/virtio_video_dec.c: In function 'virtio_video_dec_init':
+drivers/media/virtio/virtio_video_dec.c:419:10: warning:
+	variable 'num' set but not used
+
+drivers/media/virtio/virtio_video_enc.c:162:5: warning:
+	no previous prototype for 'virtio_video_enc_init_ctrls'
+drivers/media/virtio/virtio_video_enc.c:223:5: warning:
+	no previous prototype for 'virtio_video_enc_init_queues'
+drivers/media/virtio/virtio_video_enc.c:559:5: warning:
+	no previous prototype for 'virtio_video_enc_init'
+drivers/media/virtio/virtio_video_enc.c: In function 'virtio_video_enc_init':
+drivers/media/virtio/virtio_video_enc.c:561:10: warning:
+	variable 'num' set but not used
+
+BUG=b:120456557, b:151703605
+TEST=compile with VIRTIO_VIDEO enabled
+
+Change-Id: Ic0e9f9b5efc54b627cd9024e90b3559a731ab1cc
+Reported-by: kbuild test robot <lkp@intel.com>
+Signed-off-by: Guenter Roeck <groeck@chromium.org>
+Reviewed-on: https://chromium-review.googlesource.com/c/chromiumos/third_party/kernel/+/2214405
+Reviewed-by: Keiichi Watanabe <keiichiw@chromium.org>
+Tested-by: Keiichi Watanabe <keiichiw@chromium.org>
+Commit-Queue: Keiichi Watanabe <keiichiw@chromium.org>
+---
+ drivers/media/virtio/virtio_video_dec.c | 9 ++++-----
+ drivers/media/virtio/virtio_video_enc.c | 5 ++---
+ 2 files changed, 6 insertions(+), 8 deletions(-)
+
+diff --git a/drivers/media/virtio/virtio_video_dec.c b/drivers/media/virtio/virtio_video_dec.c
+index 0e2dff8fd1ea..745abcd7bbc2 100644
+--- a/drivers/media/virtio/virtio_video_dec.c
++++ b/drivers/media/virtio/virtio_video_dec.c
+@@ -21,6 +21,7 @@
+ #include <media/v4l2-ioctl.h>
+ 
+ #include "virtio_video.h"
++#include "virtio_video_dec.h"
+ 
+ static void virtio_video_dec_buf_queue(struct vb2_buffer *vb)
+ {
+@@ -335,8 +336,8 @@ static int virtio_video_dec_enum_fmt_vid_cap(struct file *file, void *fh,
+ }
+ 
+ 
+-int virtio_video_dec_enum_fmt_vid_out(struct file *file, void *fh,
+-				      struct v4l2_fmtdesc *f)
++static int virtio_video_dec_enum_fmt_vid_out(struct file *file, void *fh,
++					     struct v4l2_fmtdesc *f)
+ {
+ 	struct virtio_video_stream *stream = file2stream(file);
+ 	struct virtio_video_device *vvd = to_virtio_vd(stream->video_dev);
+@@ -419,10 +420,8 @@ static const struct v4l2_ioctl_ops virtio_video_dec_ioctl_ops = {
+ 
+ int virtio_video_dec_init(struct video_device *vd)
+ {
+-	ssize_t num;
+-
+ 	vd->ioctl_ops = &virtio_video_dec_ioctl_ops;
+-	num = strscpy(vd->name, "stateful-decoder", sizeof(vd->name));
++	strscpy(vd->name, "stateful-decoder", sizeof(vd->name));
+ 
+ 	return 0;
+ }
+diff --git a/drivers/media/virtio/virtio_video_enc.c b/drivers/media/virtio/virtio_video_enc.c
+index beac60fae1e9..9de12d674cd8 100644
+--- a/drivers/media/virtio/virtio_video_enc.c
++++ b/drivers/media/virtio/virtio_video_enc.c
+@@ -21,6 +21,7 @@
+ #include <media/v4l2-ioctl.h>
+ 
+ #include "virtio_video.h"
++#include "virtio_video_enc.h"
+ 
+ static void virtio_video_enc_buf_queue(struct vb2_buffer *vb)
+ {
+@@ -560,10 +561,8 @@ static const struct v4l2_ioctl_ops virtio_video_enc_ioctl_ops = {
+ 
+ int virtio_video_enc_init(struct video_device *vd)
+ {
+-	ssize_t num;
+-
+ 	vd->ioctl_ops = &virtio_video_enc_ioctl_ops;
+-	num = strscpy(vd->name, "stateful-encoder", sizeof(vd->name));
++	strscpy(vd->name, "stateful-encoder", sizeof(vd->name));
+ 
+ 	return 0;
+ }
+-- 
+2.25.1
+

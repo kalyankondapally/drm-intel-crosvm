@@ -1,0 +1,86 @@
+From 7dcd16ee82efe569e8796f3ae22c94a54d00463b Mon Sep 17 00:00:00 2001
+From: Gurchetan Singh <gurchetansingh@chromium.org>
+Date: Fri, 3 May 2019 08:42:53 -0700
+Subject: [PATCH 13/61] CHROMIUM: drm/virtgpu: add stub ioctl implementation
+
+Add plumbing for new ioctls.
+
+BUG=chromium:924405
+TEST=compile
+
+Change-Id: Idf42b6e1b1bbf4b753b8ff0ac8c5f65dc21ec27e
+Reviewed-on: https://chromium-review.googlesource.com/c/chromiumos/third_party/kernel/+/1629911
+Reviewed-by: Robert Tarasov <tutankhamen@chromium.org>
+Commit-Queue: Gurchetan Singh <gurchetansingh@chromium.org>
+Tested-by: Gurchetan Singh <gurchetansingh@chromium.org>
+[rebase54(groeck): Context conflicts]
+Signed-off-by: Guenter Roeck <groeck@chromium.org>
+---
+ drivers/gpu/drm/virtio/virtgpu_drv.h   |  4 ++--
+ drivers/gpu/drm/virtio/virtgpu_ioctl.c | 30 ++++++++++++++++++++++++++
+ 2 files changed, 32 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/gpu/drm/virtio/virtgpu_drv.h b/drivers/gpu/drm/virtio/virtgpu_drv.h
+index 0afb31225cfb..432886fcb9fe 100644
+--- a/drivers/gpu/drm/virtio/virtgpu_drv.h
++++ b/drivers/gpu/drm/virtio/virtgpu_drv.h
+@@ -234,8 +234,8 @@ struct virtio_gpu_fpriv {
+ 	struct mutex context_lock;
+ };
+ 
+-/* virtgpu_ioctl.c */
+-#define DRM_VIRTIO_NUM_IOCTLS 10
++/* virtio_ioctl.c */
++#define DRM_VIRTIO_NUM_IOCTLS 13
+ extern struct drm_ioctl_desc virtio_gpu_ioctls[DRM_VIRTIO_NUM_IOCTLS];
+ void virtio_gpu_create_context(struct drm_device *dev, struct drm_file *file);
+ 
+diff --git a/drivers/gpu/drm/virtio/virtgpu_ioctl.c b/drivers/gpu/drm/virtio/virtgpu_ioctl.c
+index 15963a62d06c..fbbf9db80142 100644
+--- a/drivers/gpu/drm/virtio/virtgpu_ioctl.c
++++ b/drivers/gpu/drm/virtio/virtgpu_ioctl.c
+@@ -512,6 +512,24 @@ static int virtio_gpu_get_caps_ioctl(struct drm_device *dev,
+ 	return 0;
+ }
+ 
++static int virtio_gpu_resource_create_v2_ioctl(struct drm_device *dev,
++				void *data, struct drm_file *file)
++{
++	return 0;
++}
++
++static int virtio_gpu_allocation_metadata_request_ioctl(struct drm_device *dev,
++				void *data, struct drm_file *file)
++{
++	return 0;
++}
++
++static int virtio_gpu_allocation_metadata_response_ioctl(struct drm_device *dev,
++					void *data, struct drm_file *file)
++{
++	return 0;
++}
++
+ struct drm_ioctl_desc virtio_gpu_ioctls[DRM_VIRTIO_NUM_IOCTLS] = {
+ 	DRM_IOCTL_DEF_DRV(VIRTGPU_MAP, virtio_gpu_map_ioctl,
+ 			  DRM_RENDER_ALLOW),
+@@ -544,4 +562,16 @@ struct drm_ioctl_desc virtio_gpu_ioctls[DRM_VIRTIO_NUM_IOCTLS] = {
+ 
+ 	DRM_IOCTL_DEF_DRV(VIRTGPU_GET_CAPS, virtio_gpu_get_caps_ioctl,
+ 			  DRM_RENDER_ALLOW),
++
++	DRM_IOCTL_DEF_DRV(VIRTGPU_RESOURCE_CREATE_V2,
++			  virtio_gpu_resource_create_v2_ioctl,
++			  DRM_AUTH | DRM_RENDER_ALLOW),
++
++	DRM_IOCTL_DEF_DRV(VIRTGPU_ALLOCATION_METADATA_REQUEST,
++			  virtio_gpu_allocation_metadata_request_ioctl,
++			  DRM_AUTH | DRM_RENDER_ALLOW),
++
++	DRM_IOCTL_DEF_DRV(VIRTGPU_ALLOCATION_METADATA_RESPONSE,
++			  virtio_gpu_allocation_metadata_response_ioctl,
++			  DRM_AUTH | DRM_RENDER_ALLOW),
+ };
+-- 
+2.25.1
+

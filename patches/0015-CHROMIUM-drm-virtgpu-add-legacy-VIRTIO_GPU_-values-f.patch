@@ -1,0 +1,68 @@
+From e70d3463cad87f0dae18858b2f714de3600676b1 Mon Sep 17 00:00:00 2001
+From: Zach Reizner <zachr@google.com>
+Date: Tue, 11 Feb 2020 11:28:19 -0800
+Subject: [PATCH 15/61] CHROMIUM: drm/virtgpu: add legacy VIRTIO_GPU_* values
+ for non-upstream variants
+
+Upstream is foolishly using values for VIRTIO_GPU_RESP_OK_* that we are
+already using in crosvm's virtio-gpu impl. In order to work around this,
+this change renumbers to values that are unlikely to collide with
+existing ones, and renaming the existing ones as *_LEGACY so that the
+kernel may be compatible with both old and new versions of crosvm.
+
+BUG=chromium:1047867
+TEST=glxgears on crostini
+
+Change-Id: I996097e9cc80046accb4ea9a8e21a8dfde5cd72c
+Reviewed-on: https://chromium-review.googlesource.com/c/chromiumos/third_party/kernel/+/2051223
+Reviewed-by: Daniel Verkamp <dverkamp@chromium.org>
+Tested-by: Zach Reizner <zachr@chromium.org>
+Commit-Queue: Daniel Verkamp <dverkamp@chromium.org>
+---
+ drivers/gpu/drm/virtio/virtgpu_vq.c | 8 +++++++-
+ include/uapi/linux/virtio_gpu.h     | 9 ++++++++-
+ 2 files changed, 15 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/gpu/drm/virtio/virtgpu_vq.c b/drivers/gpu/drm/virtio/virtgpu_vq.c
+index 93956208fcf4..bc75d8a16838 100644
+--- a/drivers/gpu/drm/virtio/virtgpu_vq.c
++++ b/drivers/gpu/drm/virtio/virtgpu_vq.c
+@@ -996,8 +996,14 @@ static void virtio_gpu_cmd_resource_create_cb(struct virtio_gpu_device *vgdev,
+ 	 */
+ 	vbuf->data_buf = NULL;
+ 
+-	if (resp_type != VIRTIO_GPU_RESP_OK_RESOURCE_PLANE_INFO)
++
++	switch (resp_type) {
++	case VIRTIO_GPU_RESP_OK_RESOURCE_PLANE_INFO:
++	case VIRTIO_GPU_RESP_OK_RESOURCE_PLANE_INFO_LEGACY:
++		break;
++	default:
+ 		goto finish_pending;
++	}
+ 
+ 	obj->num_planes = le32_to_cpu(resp->num_planes);
+ 	obj->format_modifier = le64_to_cpu(resp->format_modifier);
+diff --git a/include/uapi/linux/virtio_gpu.h b/include/uapi/linux/virtio_gpu.h
+index a994cc42fac4..cc0ec5168fa2 100644
+--- a/include/uapi/linux/virtio_gpu.h
++++ b/include/uapi/linux/virtio_gpu.h
+@@ -90,7 +90,14 @@ enum virtio_gpu_ctrl_type {
+ 	VIRTIO_GPU_RESP_OK_CAPSET,
+ 	VIRTIO_GPU_RESP_OK_EDID,
+ 	VIRTIO_GPU_RESP_OK_RESOURCE_UUID,
+-	VIRTIO_GPU_RESP_OK_RESOURCE_PLANE_INFO,
++
++	/* CHROMIUM: legacy responses */
++	VIRTIO_GPU_RESP_OK_RESOURCE_PLANE_INFO_LEGACY = 0x1104,
++	VIRTIO_GPU_RESP_OK_ALLOCATION_METADATA_LEGACY = 0x1106,
++
++	/* CHROMIUM: success responses */
++	VIRTIO_GPU_RESP_OK_RESOURCE_PLANE_INFO = 0x11FF,
++	VIRTIO_GPU_RESP_OK_ALLOCATION_METADATA = 0x11FE,
+ 
+ 	/* error responses */
+ 	VIRTIO_GPU_RESP_ERR_UNSPEC = 0x1200,
+-- 
+2.25.1
+

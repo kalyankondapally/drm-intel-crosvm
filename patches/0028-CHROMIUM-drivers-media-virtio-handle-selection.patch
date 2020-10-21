@@ -1,0 +1,50 @@
+From 37863921b04ee9af130a4f62bbe1a1a54ed1c7e0 Mon Sep 17 00:00:00 2001
+From: David Stevens <stevensd@chromium.org>
+Date: Fri, 19 Jun 2020 16:37:33 +0900
+Subject: [PATCH 28/61] CHROMIUM: drivers: media: virtio: handle selection
+
+BUG=b:151703605
+TEST=tast run ARCVM-DUT arc.VideoDecodeAccel*vm
+
+Change-Id: I8c699abfef01c5063494546031496afa806274ea
+Signed-off-by: David Stevens <stevensd@chromium.org>
+Reviewed-on: https://chromium-review.googlesource.com/c/chromiumos/third_party/kernel/+/2253500
+Reviewed-by: Tomasz Figa <tfiga@chromium.org>
+Reviewed-by: Keiichi Watanabe <keiichiw@chromium.org>
+Reviewed-by: Alexandre Courbot <acourbot@chromium.org>
+---
+ drivers/media/virtio/virtio_video_device.c | 15 ++++++++++++---
+ 1 file changed, 12 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/media/virtio/virtio_video_device.c b/drivers/media/virtio/virtio_video_device.c
+index 14b58f14d315..e040b6eef763 100644
+--- a/drivers/media/virtio/virtio_video_device.c
++++ b/drivers/media/virtio/virtio_video_device.c
+@@ -490,12 +490,21 @@ int virtio_video_g_selection(struct file *file, void *fh,
+ 	}
+ 
+ 	switch (sel->target) {
+-	case V4L2_SEL_TGT_COMPOSE:
+-	case V4L2_SEL_TGT_COMPOSE_BOUNDS:
+-	case V4L2_SEL_TGT_COMPOSE_PADDED:
++	case V4L2_SEL_TGT_CROP_BOUNDS:
+ 		sel->r.width = info->frame_width;
+ 		sel->r.height = info->frame_height;
+ 		break;
++	case V4L2_SEL_TGT_CROP_DEFAULT:
++	case V4L2_SEL_TGT_CROP:
++	case V4L2_SEL_TGT_COMPOSE_BOUNDS:
++	case V4L2_SEL_TGT_COMPOSE_DEFAULT:
++	case V4L2_SEL_TGT_COMPOSE:
++	case V4L2_SEL_TGT_COMPOSE_PADDED:
++		sel->r.left = info->crop.left;
++		sel->r.top = info->crop.top;
++		sel->r.width = info->crop.width;
++		sel->r.height = info->crop.height;
++		break;
+ 	default:
+ 		v4l2_dbg(1, vvd->vv->debug, &vvd->vv->v4l2_dev,
+ 			 "unsupported/invalid selection target: %d\n",
+-- 
+2.25.1
+

@@ -1,0 +1,59 @@
+From 0061a3fa8f94758ecc52bf51ca2e2de1be0c3e42 Mon Sep 17 00:00:00 2001
+From: Gurchetan Singh <gurchetansingh@chromium.org>
+Date: Mon, 21 Sep 2020 21:40:30 -0700
+Subject: [PATCH 14/61] CHROMIUM: drm/virtgpu: introduce request IDRs
+
+This way we can lookup allocation metadata requests from the host.
+
+BUG=chromium:924405
+TEST=compile
+
+Change-Id: I88bbde1254a9e1190b79fda876a89c36e6199849
+Reviewed-on: https://chromium-review.googlesource.com/c/chromiumos/third_party/kernel/+/1702158
+Reviewed-by: Robert Tarasov <tutankhamen@chromium.org>
+Commit-Queue: Gurchetan Singh <gurchetansingh@chromium.org>
+Tested-by: Gurchetan Singh <gurchetansingh@chromium.org>
+
+Rebase
+Signed-off-by: Kalyan Kondapally <kalyan.kondapally@intel.com>
+---
+ drivers/gpu/drm/virtio/virtgpu_drv.h | 6 ++++++
+ drivers/gpu/drm/virtio/virtgpu_kms.c | 3 +++
+ 2 files changed, 9 insertions(+)
+
+diff --git a/drivers/gpu/drm/virtio/virtgpu_drv.h b/drivers/gpu/drm/virtio/virtgpu_drv.h
+index 432886fcb9fe..57ae664b77a0 100644
+--- a/drivers/gpu/drm/virtio/virtgpu_drv.h
++++ b/drivers/gpu/drm/virtio/virtgpu_drv.h
+@@ -226,6 +226,12 @@ struct virtio_gpu_device {
+ 	struct virtio_gpu_drv_capset *capsets;
+ 	uint32_t num_capsets;
+ 	struct list_head cap_cache;
++
++	/* protects resource state when exporting */
++	spinlock_t resource_export_lock;
++	
++	struct idr request_idr;
++	spinlock_t request_idr_lock;
+ };
+ 
+ struct virtio_gpu_fpriv {
+diff --git a/drivers/gpu/drm/virtio/virtgpu_kms.c b/drivers/gpu/drm/virtio/virtgpu_kms.c
+index c9974a0779aa..63dfbbc17477 100644
+--- a/drivers/gpu/drm/virtio/virtgpu_kms.c
++++ b/drivers/gpu/drm/virtio/virtgpu_kms.c
+@@ -120,8 +120,11 @@ int virtio_gpu_init(struct drm_device *dev)
+ 	vgdev->dev = dev->dev;
+ 
+ 	spin_lock_init(&vgdev->display_info_lock);
++	spin_lock_init(&vgdev->resource_export_lock);
++	spin_lock_init(&vgdev->request_idr_lock);
+ 	ida_init(&vgdev->ctx_id_ida);
+ 	ida_init(&vgdev->resource_ida);
++	idr_init(&vgdev->request_idr);
+ 	init_waitqueue_head(&vgdev->resp_wq);
+ 	virtio_gpu_init_vq(&vgdev->ctrlq, virtio_gpu_dequeue_ctrl_func);
+ 	virtio_gpu_init_vq(&vgdev->cursorq, virtio_gpu_dequeue_cursor_func);
+-- 
+2.25.1
+

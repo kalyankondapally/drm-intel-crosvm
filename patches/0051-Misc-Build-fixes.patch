@@ -1,0 +1,71 @@
+From f95c3e0a018d87d725fa9074003df11f66c3726b Mon Sep 17 00:00:00 2001
+From: Kalyan Kondapally <kalyan.kondapally@intel.com>
+Date: Mon, 21 Sep 2020 22:58:28 -0700
+Subject: [PATCH 51/61] Misc Build fixes.
+
+Signed-off-by: Kalyan Kondapally <kalyan.kondapally@intel.com>
+---
+ drivers/char/tpm/Kconfig                | 2 +-
+ drivers/gpu/drm/virtio/virtgpu_gem.c    | 2 ++
+ drivers/gpu/drm/virtio/virtgpu_object.c | 4 +++-
+ 3 files changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/char/tpm/Kconfig b/drivers/char/tpm/Kconfig
+index 9f16283b8eb3..5547ba35b1ad 100644
+--- a/drivers/char/tpm/Kconfig
++++ b/drivers/char/tpm/Kconfig
+@@ -180,7 +180,7 @@ config TCG_FTPM_TEE
+ config TCG_VIRTIO_VTPM
+ 	tristate "Virtio vTPM"
+ 	depends on TCG_TPM && VIRTIO
+-	---help---
++	help
+ 	  This driver provides the guest kernel side of TPM over Virtio. If
+ 	  you are building Linux to run inside of a hypervisor that supports
+ 	  TPM over Virtio, say Yes and the virtualized TPM will be
+diff --git a/drivers/gpu/drm/virtio/virtgpu_gem.c b/drivers/gpu/drm/virtio/virtgpu_gem.c
+index 9599c49c1f2b..d23bb9edef92 100644
+--- a/drivers/gpu/drm/virtio/virtgpu_gem.c
++++ b/drivers/gpu/drm/virtio/virtgpu_gem.c
+@@ -115,6 +115,7 @@ int virtio_gpu_gem_object_open(struct drm_gem_object *obj,
+ 	struct virtio_gpu_device *vgdev = obj->dev->dev_private;
+ 	struct virtio_gpu_fpriv *vfpriv = file->driver_priv;
+ 	struct virtio_gpu_object_array *objs;
++	struct virtio_gpu_object *qobj = gem_to_virtio_gpu_obj(obj);
+ 
+ 	if (!vgdev->has_virgl_3d || !qobj->hw_res_handle ||
+             qobj->resource_v2)
+@@ -138,6 +139,7 @@ void virtio_gpu_gem_object_close(struct drm_gem_object *obj,
+ 	struct virtio_gpu_device *vgdev = obj->dev->dev_private;
+ 	struct virtio_gpu_fpriv *vfpriv = file->driver_priv;
+ 	struct virtio_gpu_object_array *objs;
++	struct virtio_gpu_object *qobj = gem_to_virtio_gpu_obj(obj);
+ 
+ 	if (!vgdev->has_virgl_3d || qobj->resource_v2)
+ 		return;
+diff --git a/drivers/gpu/drm/virtio/virtgpu_object.c b/drivers/gpu/drm/virtio/virtgpu_object.c
+index 7fabed18ce5c..7a99b3ba6905 100644
+--- a/drivers/gpu/drm/virtio/virtgpu_object.c
++++ b/drivers/gpu/drm/virtio/virtgpu_object.c
+@@ -28,6 +28,7 @@
+ #include <linux/dma-buf.h>
+ 
+ #include "virtgpu_drv.h"
++#include <linux/virtio_dma_buf.h>
+ 
+ static int virtio_gpu_virglrenderer_workaround = 1;
+ module_param_named(virglhack, virtio_gpu_virglrenderer_workaround, int, 0400);
+@@ -271,8 +272,9 @@ int virtio_gpu_dma_buf_to_handle(struct dma_buf *dma_buf, bool no_wait,
+ {
+ 	struct virtio_gpu_object *qobj;
+ 	struct virtio_gpu_device *vgdev;
++	uuid_t uuid;
+ 
+-	if (dma_buf->ops != &virtgpu_dmabuf_ops)
++	if (virtio_dma_buf_get_uuid(dma_buf, &uuid) != 0)
+ 		return -EINVAL;
+ 
+ 	qobj = gem_to_virtio_gpu_obj(dma_buf->priv);
+-- 
+2.25.1
+

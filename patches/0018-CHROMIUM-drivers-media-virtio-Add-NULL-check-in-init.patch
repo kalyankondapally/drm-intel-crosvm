@@ -1,0 +1,53 @@
+From 538aa4fd5b269d686c887aac8030d84b2ca72552 Mon Sep 17 00:00:00 2001
+From: Keiichi Watanabe <keiichiw@chromium.org>
+Date: Tue, 17 Mar 2020 19:28:15 +0900
+Subject: [PATCH 18/61] CHROMIUM: drivers: media: virtio: Add NULL check in
+ init_ctrls callbacks
+
+Add missing NULL check in init_ctrls callbacks for decoder and encoder.
+
+BUG=b:151703605
+TEST=compile
+
+Change-Id: I2789ef2a4eae1c140f7d28a0228dd1c29ad36eee
+Signed-off-by: Keiichi Watanabe <keiichiw@chromium.org>
+Reviewed-on: https://chromium-review.googlesource.com/c/chromiumos/third_party/kernel/+/2107042
+Reviewed-by: Alexandre Courbot <acourbot@chromium.org>
+---
+ drivers/media/virtio/virtio_video_dec.c | 4 +++-
+ drivers/media/virtio/virtio_video_enc.c | 4 +++-
+ 2 files changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/media/virtio/virtio_video_dec.c b/drivers/media/virtio/virtio_video_dec.c
+index 4b85337bb9f3..9b9b9ab2666e 100644
+--- a/drivers/media/virtio/virtio_video_dec.c
++++ b/drivers/media/virtio/virtio_video_dec.c
+@@ -164,7 +164,9 @@ int virtio_video_dec_init_ctrls(struct virtio_video_stream *stream)
+ 				V4L2_CID_MIN_BUFFERS_FOR_CAPTURE,
+ 				MIN_BUFS_MIN, MIN_BUFS_MAX, MIN_BUFS_STEP,
+ 				MIN_BUFS_DEF);
+-	ctrl->flags |= V4L2_CTRL_FLAG_VOLATILE;
++
++	if (ctrl)
++		ctrl->flags |= V4L2_CTRL_FLAG_VOLATILE;
+ 
+ 	if (stream->ctrl_handler.error)
+ 		return stream->ctrl_handler.error;
+diff --git a/drivers/media/virtio/virtio_video_enc.c b/drivers/media/virtio/virtio_video_enc.c
+index 6eb19a632c00..beac60fae1e9 100644
+--- a/drivers/media/virtio/virtio_video_enc.c
++++ b/drivers/media/virtio/virtio_video_enc.c
+@@ -173,7 +173,9 @@ int virtio_video_enc_init_ctrls(struct virtio_video_stream *stream)
+ 				V4L2_CID_MIN_BUFFERS_FOR_OUTPUT,
+ 				MIN_BUFS_MIN, MIN_BUFS_MAX, MIN_BUFS_STEP,
+ 				MIN_BUFS_DEF);
+-	ctrl->flags |= V4L2_CTRL_FLAG_VOLATILE;
++
++	if (ctrl)
++		ctrl->flags |= V4L2_CTRL_FLAG_VOLATILE;
+ 
+ 	list_for_each_entry(c_fmt, &vvd->controls_fmt_list,
+ 			    controls_list_entry) {
+-- 
+2.25.1
+

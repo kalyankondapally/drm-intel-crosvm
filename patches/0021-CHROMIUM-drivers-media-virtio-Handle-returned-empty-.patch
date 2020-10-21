@@ -1,0 +1,53 @@
+From 6a9d79be0e6584dd16b2d3a2ef7eb64a7f33a875 Mon Sep 17 00:00:00 2001
+From: Keiichi Watanabe <keiichiw@chromium.org>
+Date: Tue, 17 Mar 2020 20:09:14 +0900
+Subject: [PATCH 21/61] CHROMIUM: drivers: media: virtio: Handle returned empty
+ CAPTURE buffer with EOS flag
+
+The host can return an empty CAPTURE buffer to notify EOS or an error.
+In such case, the driver must be mark the buffer as "done" with byteused=0.
+
+BUG=b:151703605
+TEST=compile
+
+Change-Id: I78700fb33a8797b42a7c522f368c41b693fb81f9
+Signed-off-by: Keiichi Watanabe <keiichiw@chromium.org>
+Reviewed-on: https://chromium-review.googlesource.com/c/chromiumos/third_party/kernel/+/2107045
+Reviewed-by: Alexandre Courbot <acourbot@chromium.org>
+---
+ drivers/media/virtio/virtio_video_device.c | 19 +++++++++++++++++++
+ 1 file changed, 19 insertions(+)
+
+diff --git a/drivers/media/virtio/virtio_video_device.c b/drivers/media/virtio/virtio_video_device.c
+index 4c80afece4b7..ac3c6347c0a0 100644
+--- a/drivers/media/virtio/virtio_video_device.c
++++ b/drivers/media/virtio/virtio_video_device.c
+@@ -575,6 +575,25 @@ void virtio_video_buf_done(struct virtio_video_buffer *virtio_vb,
+ 		virtio_video_queue_eos_event(stream);
+ 	}
+ 
++	/*
++	 * If the host notifies an error or EOS with a buffer flag,
++	 * the driver must set |bytesused| to 0.
++	 *
++	 * TODO(b/151810591): Though crosvm virtio-video device returns an
++	 * empty buffer with EOS flag, the currecnt virtio-video protocol
++	 * (v3 RFC) doesn't provides a way of knowing whether an EOS buffer
++	 * is empty or not.
++	 * So, we are assuming that EOS buffer is always empty. Once the
++	 * protocol is updated, we should update this implementation based
++	 * on the wrong assumption.
++	 */
++	if ((flags & VIRTIO_VIDEO_BUFFER_FLAG_ERR) ||
++	    (flags & VIRTIO_VIDEO_BUFFER_FLAG_EOS)) {
++		vb->planes[0].bytesused = 0;
++		v4l2_m2m_buf_done(v4l2_vb, done_state);
++		return;
++	}
++
+ 	if (!V4L2_TYPE_IS_OUTPUT(vb2_queue->type)) {
+ 		switch (vvd->type) {
+ 		case VIRTIO_VIDEO_DEVICE_ENCODER:
+-- 
+2.25.1
+

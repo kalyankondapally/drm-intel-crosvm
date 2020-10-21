@@ -1,0 +1,33 @@
+From 00c96b6df45462aa9a1095a48a89ab7d6885588f Mon Sep 17 00:00:00 2001
+From: Gurchetan Singh <gurchetansingh@chromium.org>
+Date: Wed, 2 Sep 2020 14:08:26 -0700
+Subject: [PATCH 02/61] drm/virtio: fix uninitialized variable
+
+smatch reported this with the blob series:
+
+drivers/gpu/drm/virtio/virtgpu_kms.c:227 virtio_gpu_init()
+error: uninitialized symbol 'ret'.
+
+Signed-off-by: Gurchetan Singh <gurchetansingh@chromium.org>
+Link: http://patchwork.freedesktop.org/patch/msgid/20200902210847.2689-3-gurchetansingh@chromium.org
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+---
+ drivers/gpu/drm/virtio/virtgpu_kms.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/gpu/drm/virtio/virtgpu_kms.c b/drivers/gpu/drm/virtio/virtgpu_kms.c
+index dc8cb8dfce58..46f7dcdc8682 100644
+--- a/drivers/gpu/drm/virtio/virtgpu_kms.c
++++ b/drivers/gpu/drm/virtio/virtgpu_kms.c
+@@ -105,7 +105,7 @@ int virtio_gpu_init(struct drm_device *dev)
+ 	/* this will expand later */
+ 	struct virtqueue *vqs[2];
+ 	u32 num_scanouts, num_capsets;
+-	int ret;
++	int ret = 0;
+ 
+ 	if (!virtio_has_feature(dev_to_virtio(dev->dev), VIRTIO_F_VERSION_1))
+ 		return -ENODEV;
+-- 
+2.25.1
+

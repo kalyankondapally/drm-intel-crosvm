@@ -1,0 +1,81 @@
+From 96855615b2e6707cdedef14bee11b9067d9c316e Mon Sep 17 00:00:00 2001
+From: David Stevens <stevensd@chromium.org>
+Date: Wed, 19 Aug 2020 12:10:11 +0900
+Subject: [PATCH 36/61] virtio: fix build for configs without dma-bufs
+
+Reported-by: kernel test robot <lkp@intel.com>
+Signed-off-by: David Stevens <stevensd@chromium.org>
+Link: http://patchwork.freedesktop.org/patch/msgid/20200819031011.310180-1-stevensd@chromium.org
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+---
+ drivers/gpu/drm/virtio/Kconfig  | 1 +
+ drivers/virtio/Kconfig          | 7 +++++++
+ drivers/virtio/Makefile         | 3 ++-
+ drivers/virtio/virtio_dma_buf.c | 3 +++
+ 4 files changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/gpu/drm/virtio/Kconfig b/drivers/gpu/drm/virtio/Kconfig
+index eff3047052d4..67624423013a 100644
+--- a/drivers/gpu/drm/virtio/Kconfig
++++ b/drivers/gpu/drm/virtio/Kconfig
+@@ -4,6 +4,7 @@ config DRM_VIRTIO_GPU
+ 	depends on DRM && VIRTIO && MMU
+ 	select DRM_KMS_HELPER
+ 	select DRM_GEM_SHMEM_HELPER
++	select VIRTIO_DMA_SHARED_BUFFER
+ 	help
+ 	   This is the virtual GPU driver for virtio.  It can be used with
+ 	   QEMU based VMMs (like KVM or Xen).
+diff --git a/drivers/virtio/Kconfig b/drivers/virtio/Kconfig
+index 5c92e4a50882..e76e9b9ba93c 100644
+--- a/drivers/virtio/Kconfig
++++ b/drivers/virtio/Kconfig
+@@ -126,4 +126,11 @@ config VIRTIO_MMIO_CMDLINE_DEVICES
+ 
+ 	 If unsure, say 'N'.
+ 
++config VIRTIO_DMA_SHARED_BUFFER
++	tristate
++	depends on DMA_SHARED_BUFFER
++	help
++	 This option adds a flavor of dma buffers that are backed by
++	 virtio resources.
++
+ endif # VIRTIO_MENU
+diff --git a/drivers/virtio/Makefile b/drivers/virtio/Makefile
+index 49da768ee7fd..591e6f72aa54 100644
+--- a/drivers/virtio/Makefile
++++ b/drivers/virtio/Makefile
+@@ -1,5 +1,5 @@
+ # SPDX-License-Identifier: GPL-2.0
+-obj-$(CONFIG_VIRTIO) += virtio.o virtio_ring.o virtio_dma_buf.o
++obj-$(CONFIG_VIRTIO) += virtio.o virtio_ring.o
+ obj-$(CONFIG_VIRTIO_MMIO) += virtio_mmio.o
+ obj-$(CONFIG_VIRTIO_PCI) += virtio_pci.o
+ virtio_pci-y := virtio_pci_modern.o virtio_pci_common.o
+@@ -8,3 +8,4 @@ obj-$(CONFIG_VIRTIO_BALLOON) += virtio_balloon.o
+ obj-$(CONFIG_VIRTIO_INPUT) += virtio_input.o
+ obj-$(CONFIG_VIRTIO_VDPA) += virtio_vdpa.o
+ obj-$(CONFIG_VIRTIO_MEM) += virtio_mem.o
++obj-$(CONFIG_VIRTIO_DMA_SHARED_BUFFER) += virtio_dma_buf.o
+diff --git a/drivers/virtio/virtio_dma_buf.c b/drivers/virtio/virtio_dma_buf.c
+index 45d6e8647dcf..5127a2f0c986 100644
+--- a/drivers/virtio/virtio_dma_buf.c
++++ b/drivers/virtio/virtio_dma_buf.c
+@@ -5,6 +5,7 @@
+  * Copyright (C) 2020 Google, Inc.
+  */
+ 
++#include <linux/module.h>
+ #include <linux/virtio_dma_buf.h>
+ 
+ /**
+@@ -83,3 +84,5 @@ int virtio_dma_buf_get_uuid(struct dma_buf *dma_buf,
+ 	return ops->get_uuid(dma_buf, uuid);
+ }
+ EXPORT_SYMBOL(virtio_dma_buf_get_uuid);
++
++MODULE_LICENSE("GPL");
+-- 
+2.25.1
+

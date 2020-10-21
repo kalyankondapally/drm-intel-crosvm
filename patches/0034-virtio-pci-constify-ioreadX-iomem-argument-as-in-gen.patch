@@ -1,0 +1,69 @@
+From aa2a69e244d68eb9f9c19060774d9039774efd07 Mon Sep 17 00:00:00 2001
+From: Krzysztof Kozlowski <krzk@kernel.org>
+Date: Fri, 14 Aug 2020 17:32:20 -0700
+Subject: [PATCH 34/61] virtio: pci: constify ioreadX() iomem argument (as in
+ generic implementation)
+
+The ioreadX() helpers have inconsistent interface.  On some architectures
+void *__iomem address argument is a pointer to const, on some not.
+
+Implementations of ioreadX() do not modify the memory under the address so
+they can be converted to a "const" version for const-safety and
+consistency among architectures.
+
+Signed-off-by: Krzysztof Kozlowski <krzk@kernel.org>
+Signed-off-by: Andrew Morton <akpm@linux-foundation.org>
+Reviewed-by: Geert Uytterhoeven <geert+renesas@glider.be>
+Cc: Allen Hubbe <allenbh@gmail.com>
+Cc: Arnd Bergmann <arnd@arndb.de>
+Cc: Benjamin Herrenschmidt <benh@kernel.crashing.org>
+Cc: Dave Jiang <dave.jiang@intel.com>
+Cc: "David S. Miller" <davem@davemloft.net>
+Cc: Geert Uytterhoeven <geert@linux-m68k.org>
+Cc: Helge Deller <deller@gmx.de>
+Cc: Ivan Kokshaysky <ink@jurassic.park.msu.ru>
+Cc: Jakub Kicinski <kuba@kernel.org>
+Cc: "James E.J. Bottomley" <James.Bottomley@HansenPartnership.com>
+Cc: Jason Wang <jasowang@redhat.com>
+Cc: Jon Mason <jdmason@kudzu.us>
+Cc: Kalle Valo <kvalo@codeaurora.org>
+Cc: Matt Turner <mattst88@gmail.com>
+Cc: Michael Ellerman <mpe@ellerman.id.au>
+Cc: "Michael S. Tsirkin" <mst@redhat.com>
+Cc: Paul Mackerras <paulus@samba.org>
+Cc: Richard Henderson <rth@twiddle.net>
+Cc: Rich Felker <dalias@libc.org>
+Cc: Yoshinori Sato <ysato@users.sourceforge.jp>
+Link: http://lkml.kernel.org/r/20200709072837.5869-5-krzk@kernel.org
+Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+---
+ drivers/virtio/virtio_pci_modern.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/virtio/virtio_pci_modern.c b/drivers/virtio/virtio_pci_modern.c
+index 9bdc6f68221f..3e14e700b231 100644
+--- a/drivers/virtio/virtio_pci_modern.c
++++ b/drivers/virtio/virtio_pci_modern.c
+@@ -27,16 +27,16 @@
+  * method, i.e. 32-bit accesses for 32-bit fields, 16-bit accesses
+  * for 16-bit fields and 8-bit accesses for 8-bit fields.
+  */
+-static inline u8 vp_ioread8(u8 __iomem *addr)
++static inline u8 vp_ioread8(const u8 __iomem *addr)
+ {
+ 	return ioread8(addr);
+ }
+-static inline u16 vp_ioread16 (__le16 __iomem *addr)
++static inline u16 vp_ioread16 (const __le16 __iomem *addr)
+ {
+ 	return ioread16(addr);
+ }
+ 
+-static inline u32 vp_ioread32(__le32 __iomem *addr)
++static inline u32 vp_ioread32(const __le32 __iomem *addr)
+ {
+ 	return ioread32(addr);
+ }
+-- 
+2.25.1
+

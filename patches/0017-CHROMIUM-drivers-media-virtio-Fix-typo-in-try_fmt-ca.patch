@@ -1,0 +1,35 @@
+From d55c24fe41dacc00541fafa41dce4b91dc928f5c Mon Sep 17 00:00:00 2001
+From: Keiichi Watanabe <keiichiw@chromium.org>
+Date: Tue, 17 Mar 2020 19:58:02 +0900
+Subject: [PATCH 17/61] CHROMIUM: drivers: media: virtio: Fix typo in try_fmt
+ callback
+
+Replace pix_mp->width with pix_mp->height.
+
+BUG=b:151703605
+TEST=compile
+
+Change-Id: I75baead1b9679b54990fd1e13267f634078c2df1
+Signed-off-by: Keiichi Watanabe <keiichiw@chromium.org>
+Reviewed-on: https://chromium-review.googlesource.com/c/chromiumos/third_party/kernel/+/2107041
+Reviewed-by: Alexandre Courbot <acourbot@chromium.org>
+---
+ drivers/media/virtio/virtio_video_device.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/media/virtio/virtio_video_device.c b/drivers/media/virtio/virtio_video_device.c
+index 130e705580d1..2b91def8a2f2 100644
+--- a/drivers/media/virtio/virtio_video_device.c
++++ b/drivers/media/virtio/virtio_video_device.c
+@@ -423,7 +423,7 @@ int virtio_video_try_fmt(struct virtio_video_stream *stream,
+ 				  frame->width.max))
+ 			continue;
+ 
+-		if (!within_range(frame->height.min, pix_mp->width,
++		if (!within_range(frame->height.min, pix_mp->height,
+ 				  frame->height.max))
+ 			continue;
+ 		idx = i;
+-- 
+2.25.1
+

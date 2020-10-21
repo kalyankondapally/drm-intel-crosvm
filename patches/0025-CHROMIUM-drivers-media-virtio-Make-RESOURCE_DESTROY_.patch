@@ -1,0 +1,143 @@
+From 77366f1b8d973d78f22b97b6f510e9b8a4627c84 Mon Sep 17 00:00:00 2001
+From: Keiichi Watanabe <keiichiw@chromium.org>
+Date: Tue, 17 Mar 2020 19:19:42 +0900
+Subject: [PATCH 25/61] CHROMIUM: drivers: media: virtio: Make
+ RESOURCE_DESTROY_ALL synchronous
+
+When the virtio-video driver sends RESOURCE_DESTROY_ALL command, it must
+wait for the host returning a response for the command.
+
+BUG=b:151703605
+TEST=compile
+
+Change-Id: I7eeea5d3ad6beab172f9590611fe558b2e5035fb
+Signed-off-by: Keiichi Watanabe <keiichiw@chromium.org>
+Reviewed-on: https://chromium-review.googlesource.com/c/chromiumos/third_party/kernel/+/2060510
+---
+ drivers/media/virtio/virtio_video_device.c | 24 ++++++++++++++---
+ drivers/media/virtio/virtio_video_vq.c     | 31 +++++++++++++++++++++-
+ 2 files changed, 51 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/media/virtio/virtio_video_device.c b/drivers/media/virtio/virtio_video_device.c
+index 5d6290c6097c..da78cf2070a9 100644
+--- a/drivers/media/virtio/virtio_video_device.c
++++ b/drivers/media/virtio/virtio_video_device.c
+@@ -72,11 +72,15 @@ static int virtio_video_send_resource_create_object(struct vb2_buffer *vb,
+ 	struct virtio_video_object_entry *ent;
+ 	int queue_type;
+ 	int ret;
++	bool *destroyed;
+ 
+-	if (V4L2_TYPE_IS_OUTPUT(vb->vb2_queue->type))
++	if (V4L2_TYPE_IS_OUTPUT(vb->vb2_queue->type)) {
+ 		queue_type = VIRTIO_VIDEO_QUEUE_TYPE_INPUT;
+-	else
++		destroyed = &stream->src_destroyed;
++	} else {
+ 		queue_type = VIRTIO_VIDEO_QUEUE_TYPE_OUTPUT;
++		destroyed = &stream->dst_destroyed;
++	}
+ 
+ 	ent = kcalloc(1, sizeof(*ent), GFP_KERNEL);
+ 	uuid_copy((uuid_t *) &ent->uuid, &uuid);
+@@ -106,6 +110,7 @@ static int virtio_video_send_resource_create_object(struct vb2_buffer *vb,
+ 
+ 	virtio_vb->resource_id = resource_id;
+ 	virtio_vb->uuid = uuid;
++	*destroyed = false;
+ 
+ 	return 0;
+ }
+@@ -610,12 +615,23 @@ static int virtio_video_queue_free(struct virtio_video *vv,
+ {
+ 	int ret;
+ 	uint32_t queue_type = to_virtio_queue_type(type);
++	const bool *destroyed = V4L2_TYPE_IS_OUTPUT(type) ?
++		&stream->src_destroyed : &stream->dst_destroyed;
+ 
+ 	ret = virtio_video_cmd_resource_destroy_all(vv, stream,
+ 						    queue_type);
+-	if (ret)
++	if (ret) {
+ 		v4l2_warn(&vv->v4l2_dev,
+ 			  "failed to destroy resources\n");
++		return ret;
++	}
++
++	ret = wait_event_timeout(vv->wq, *destroyed, 5 * HZ);
++	if (ret == 0) {
++		v4l2_err(&vv->v4l2_dev, "timed out waiting for resource destruction for %s\n",
++			 V4L2_TYPE_IS_OUTPUT(type) ? "OUTPUT" : "CAPTURE");
++		return -EINVAL;
++	}
+ 
+ 	return 0;
+ }
+@@ -880,6 +896,8 @@ static int virtio_video_device_open(struct file *file)
+ 	stream->video_dev = video_dev;
+ 	stream->stream_id = stream_id;
+ 	stream->state = STREAM_STATE_IDLE;
++	stream->src_destroyed = true;
++	stream->dst_destroyed = true;
+ 
+ 	ret = virtio_video_cmd_get_params(vv, stream,
+ 					  VIRTIO_VIDEO_QUEUE_TYPE_INPUT);
+diff --git a/drivers/media/virtio/virtio_video_vq.c b/drivers/media/virtio/virtio_video_vq.c
+index dc5e1b7a320e..8eeeca5f8ad5 100644
+--- a/drivers/media/virtio/virtio_video_vq.c
++++ b/drivers/media/virtio/virtio_video_vq.c
+@@ -537,6 +537,30 @@ int virtio_video_cmd_resource_create_object(
+ 	return virtio_video_queue_cmd_buffer(vv, vbuf);
+ }
+ 
++static void
++virtio_video_cmd_resource_destroy_all_cb(struct virtio_video *vv,
++					 struct virtio_video_vbuffer *vbuf)
++{
++	struct virtio_video_stream *stream = vbuf->priv;
++	struct virtio_video_resource_destroy_all *req_p =
++		(struct virtio_video_resource_destroy_all *)vbuf->buf;
++
++	switch (le32_to_cpu(req_p->queue_type)) {
++	case VIRTIO_VIDEO_QUEUE_TYPE_INPUT:
++		stream->src_destroyed = true;
++		break;
++	case VIRTIO_VIDEO_QUEUE_TYPE_OUTPUT:
++		stream->dst_destroyed = true;
++		break;
++	default:
++		v4l2_err(&vv->v4l2_dev, "invalid queue type: %u\n",
++			 req_p->queue_type);
++		return;
++	}
++
++	wake_up(&vv->wq);
++}
++
+ int virtio_video_cmd_resource_destroy_all(struct virtio_video *vv,
+ 					  struct virtio_video_stream *stream,
+ 					  enum virtio_video_queue_type qtype)
+@@ -544,7 +568,10 @@ int virtio_video_cmd_resource_destroy_all(struct virtio_video *vv,
+ 	struct virtio_video_resource_destroy_all *req_p;
+ 	struct virtio_video_vbuffer *vbuf;
+ 
+-	req_p = virtio_video_alloc_req(vv, &vbuf, sizeof(*req_p));
++	req_p = virtio_video_alloc_req_resp
++		(vv, &virtio_video_cmd_resource_destroy_all_cb,
++		 &vbuf, sizeof(*req_p),
++		 sizeof(struct virtio_video_cmd_hdr), NULL);
+ 	if (IS_ERR(req_p))
+ 		return PTR_ERR(req_p);
+ 
+@@ -552,6 +579,8 @@ int virtio_video_cmd_resource_destroy_all(struct virtio_video *vv,
+ 	req_p->hdr.stream_id = cpu_to_le32(stream->stream_id);
+ 	req_p->queue_type = cpu_to_le32(qtype);
+ 
++	vbuf->priv = stream;
++
+ 	return virtio_video_queue_cmd_buffer(vv, vbuf);
+ }
+ 
+-- 
+2.25.1
+

@@ -1,0 +1,43 @@
+From d9521a59ba9d7a8aaf79ff1b747b73559d9d150c Mon Sep 17 00:00:00 2001
+From: Rikard Falkeborn <rikard.falkeborn@gmail.com>
+Date: Wed, 1 Jul 2020 22:29:36 +0200
+Subject: [PATCH 29/61] crypto: virtio - constify features[] and id_table[]
+
+features[] and id_table[] are not modified and can be made const to
+allow the compiler to put them in read-only memory.
+
+Before:
+   text    data     bss     dec     hex filename
+  11534    2056     160   13750    35b6 drivers/crypto/virtio/virtio_crypto_core.o
+
+After:
+   text    data     bss     dec     hex filename
+  11630    1992     128   13750    35b6 drivers/crypto/virtio/virtio_crypto_core.o
+
+Signed-off-by: Rikard Falkeborn <rikard.falkeborn@gmail.com>
+Signed-off-by: Herbert Xu <herbert@gondor.apana.org.au>
+---
+ drivers/crypto/virtio/virtio_crypto_core.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/crypto/virtio/virtio_crypto_core.c b/drivers/crypto/virtio/virtio_crypto_core.c
+index c8a962c62663..77e744eaedd0 100644
+--- a/drivers/crypto/virtio/virtio_crypto_core.c
++++ b/drivers/crypto/virtio/virtio_crypto_core.c
+@@ -498,11 +498,11 @@ static int virtcrypto_restore(struct virtio_device *vdev)
+ }
+ #endif
+ 
+-static unsigned int features[] = {
++static const unsigned int features[] = {
+ 	/* none */
+ };
+ 
+-static struct virtio_device_id id_table[] = {
++static const struct virtio_device_id id_table[] = {
+ 	{ VIRTIO_ID_CRYPTO, VIRTIO_DEV_ANY_ID },
+ 	{ 0 },
+ };
+-- 
+2.25.1
+

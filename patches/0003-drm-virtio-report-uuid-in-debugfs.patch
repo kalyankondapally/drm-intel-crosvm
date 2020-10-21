@@ -1,0 +1,29 @@
+From 7f84c99cb923651bd245dccb6e9c9b31f30c3756 Mon Sep 17 00:00:00 2001
+From: Gurchetan Singh <gurchetansingh@chromium.org>
+Date: Wed, 2 Sep 2020 14:08:27 -0700
+Subject: [PATCH 03/61] drm/virtio: report uuid in debugfs
+
+In keeping with other features, report this in the debugfs.
+
+Signed-off-by: Gurchetan Singh <gurchetansingh@chromium.org>
+Link: http://patchwork.freedesktop.org/patch/msgid/20200902210847.2689-4-gurchetansingh@chromium.org
+Signed-off-by: Gerd Hoffmann <kraxel@redhat.com>
+---
+ drivers/gpu/drm/virtio/virtgpu_debugfs.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/gpu/drm/virtio/virtgpu_debugfs.c b/drivers/gpu/drm/virtio/virtgpu_debugfs.c
+index 3221520f61f0..d5b0c543bd6d 100644
+--- a/drivers/gpu/drm/virtio/virtgpu_debugfs.c
++++ b/drivers/gpu/drm/virtio/virtgpu_debugfs.c
+@@ -48,6 +48,7 @@ static int virtio_gpu_features(struct seq_file *m, void *data)
+ 	virtio_add_bool(m, "virgl", vgdev->has_virgl_3d);
+ 	virtio_add_bool(m, "edid", vgdev->has_edid);
+ 	virtio_add_bool(m, "indirect", vgdev->has_indirect);
++	virtio_add_bool(m, "resource uuid", vgdev->has_resource_assign_uuid);
+ 	virtio_add_int(m, "cap sets", vgdev->num_capsets);
+ 	virtio_add_int(m, "scanouts", vgdev->num_scanouts);
+ 	return 0;
+-- 
+2.25.1
+

@@ -1,0 +1,98 @@
+From f802ffbd130224bc467e5a4cfe6efd6a6fea1741 Mon Sep 17 00:00:00 2001
+From: Keiichi Watanabe <keiichiw@chromium.org>
+Date: Thu, 26 Mar 2020 16:01:07 +0900
+Subject: [PATCH 24/61] CHROMIUM: drivers: media: virtio: Fix bug of
+ re-registration of uuid
+
+This invalidates a uuid associated with a vb2_buffer object when the
+uuid is used for another vb2_buffer.
+
+This patch will fix a problem that happens in scenarios like this:
+
+(1) QBUF(index=0, DMABUF uuid=1)
+(2) DQBUF(index=0)
+(3) QBUF(index=1, DMABUF uuid=1)
+(4) DQBUF(index=1)
+(5) QBUF(index=0, DMABUF uuid=1)
+
+Note that index is associated with a vb2_buffer and a resource_id here.
+
+In this scenario, resource_create needs to be sent to register of a new
+combination of resource_id and a uuid for (1), (3) and (5).
+
+However, in the previous implementation, resource_create wasn't sent at (5)
+because the combination (index=0, uuid=1) had been registered for (1) and
+not been invalidated.
+
+With this patch, a uuid in a vbb2_buffer object will be invalidated when
+the uuid is tied with another vb2_buffer.
+In this scenario, the combination registered at (1) will be invalidated
+at (3).
+---
+ drivers/media/virtio/virtio_video_device.c | 27 ++++++++++++++++++----
+ 1 file changed, 22 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/media/virtio/virtio_video_device.c b/drivers/media/virtio/virtio_video_device.c
+index b1641f88e8ba..5d6290c6097c 100644
+--- a/drivers/media/virtio/virtio_video_device.c
++++ b/drivers/media/virtio/virtio_video_device.c
+@@ -67,6 +67,8 @@ static int virtio_video_send_resource_create_object(struct vb2_buffer *vb,
+ {
+ 	struct virtio_video_stream *stream = vb2_get_drv_priv(vb->vb2_queue);
+ 	struct virtio_video *vv = to_virtio_vd(stream->video_dev)->vv;
++	struct virtio_video_buffer *virtio_vb = to_virtio_vb(vb);
++	struct vb2_buffer *cur_vb;
+ 	struct virtio_video_object_entry *ent;
+ 	int queue_type;
+ 	int ret;
+@@ -84,10 +86,28 @@ static int virtio_video_send_resource_create_object(struct vb2_buffer *vb,
+ 						      queue_type,
+ 						      vb->num_planes,
+ 						      vb->planes, ent);
+-	if (ret)
++	if (ret) {
+ 		kfree(ent);
++		return ret;
++	}
+ 
+-	return ret;
++	/**
++	 * If the given uuid was previously used in another entry, invalidate
++	 * it because the uuid must be tied with only one resource_id.
++	 */
++	list_for_each_entry(cur_vb, &vb->vb2_queue->queued_list,
++			    queued_entry) {
++		struct virtio_video_buffer *cur_vvb =
++			to_virtio_vb(cur_vb);
++
++		if (uuid_equal(&uuid, &cur_vvb->uuid))
++			cur_vvb->uuid = uuid_null;
++	}
++
++	virtio_vb->resource_id = resource_id;
++	virtio_vb->uuid = uuid;
++
++	return 0;
+ }
+ 
+ static int virtio_video_buf_init_guest_pages(struct vb2_buffer *vb)
+@@ -191,8 +211,6 @@ static int virtio_video_buf_init_virtio_object(struct vb2_buffer *vb)
+ 	}
+ 
+ 	virtio_vb->queued = false;
+-	virtio_vb->resource_id = resource_id;
+-	virtio_vb->uuid = uuid;
+ 
+ 	return 0;
+ }
+@@ -240,7 +258,6 @@ int virtio_video_buf_prepare(struct vb2_buffer *vb)
+ 			vb, virtio_vb->resource_id, uuid);
+ 		if (ret)
+ 			return ret;
+-		virtio_vb->uuid = uuid;
+ 	}
+ 
+ 	return ret;
+-- 
+2.25.1
+

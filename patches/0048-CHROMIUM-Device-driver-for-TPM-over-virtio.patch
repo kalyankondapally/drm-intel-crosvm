@@ -1,0 +1,77 @@
+From d55f4ebbe0c9e005dc5a6c3de7f7322d3cc1102a Mon Sep 17 00:00:00 2001
+From: David Tolnay <dtolnay@chromium.org>
+Date: Thu, 20 Dec 2018 13:41:29 -0800
+Subject: [PATCH 48/61] CHROMIUM: Device driver for TPM over virtio
+
+This CL adds a tpm_virtio TPM driver. TPM commands are sent over virtio
+to the hypervisor during a TPM send operation and responses are received
+over the same virtio queue during a recv operation.
+
+Design doc: go/vtpm-for-glinux
+
+BUG=chromium:911799
+TEST=run TPM playground program inside crosvm
+
+Change-Id: Ib85892189fee0be5b34c957caf59dedf5a46ff83
+Signed-off-by: David Tolnay <dtolnay@chromium.org>
+Reviewed-on: https://chromium-review.googlesource.com/1480209
+Reviewed-by: Andrey Pronin <apronin@chromium.org>
+
+Conflicts:
+	drivers/char/tpm/Kconfig
+	drivers/char/tpm/Makefile
+
+[rebase54(groeck): Context conflicts; squashed:
+	FIXUP: CHROMIUM: Device driver for TPM over virtio
+]
+Signed-off-by: Guenter Roeck <groeck@chromium.org>
+---
+ drivers/char/tpm/Kconfig      | 9 +++++++++
+ drivers/char/tpm/Makefile     | 1 +
+ drivers/char/tpm/tpm_virtio.c | 2 ++
+ 3 files changed, 12 insertions(+)
+
+diff --git a/drivers/char/tpm/Kconfig b/drivers/char/tpm/Kconfig
+index 58b4c573d176..9f16283b8eb3 100644
+--- a/drivers/char/tpm/Kconfig
++++ b/drivers/char/tpm/Kconfig
+@@ -177,5 +177,14 @@ config TCG_FTPM_TEE
+ 	help
+ 	  This driver proxies for firmware TPM running in TEE.
+ 
++config TCG_VIRTIO_VTPM
++	tristate "Virtio vTPM"
++	depends on TCG_TPM && VIRTIO
++	---help---
++	  This driver provides the guest kernel side of TPM over Virtio. If
++	  you are building Linux to run inside of a hypervisor that supports
++	  TPM over Virtio, say Yes and the virtualized TPM will be
++	  accessible from the guest.
++
+ source "drivers/char/tpm/st33zp24/Kconfig"
+ endif # TCG_TPM
+diff --git a/drivers/char/tpm/Makefile b/drivers/char/tpm/Makefile
+index 9567e5197f74..2ecc31d44180 100644
+--- a/drivers/char/tpm/Makefile
++++ b/drivers/char/tpm/Makefile
+@@ -38,3 +38,4 @@ obj-$(CONFIG_TCG_XEN) += xen-tpmfront.o
+ obj-$(CONFIG_TCG_CRB) += tpm_crb.o
+ obj-$(CONFIG_TCG_VTPM_PROXY) += tpm_vtpm_proxy.o
+ obj-$(CONFIG_TCG_FTPM_TEE) += tpm_ftpm_tee.o
++obj-$(CONFIG_TCG_VIRTIO_VTPM) += tpm_virtio.o
+diff --git a/drivers/char/tpm/tpm_virtio.c b/drivers/char/tpm/tpm_virtio.c
+index 079a066182f2..2d0d721ec6bf 100644
+--- a/drivers/char/tpm/tpm_virtio.c
++++ b/drivers/char/tpm/tpm_virtio.c
+@@ -439,6 +439,8 @@ static void vtpm_remove(struct virtio_device *vdev)
+ 	kfree(dev);
+ }
+ 
++#define VIRTIO_ID_TPM 31
++
+ static struct virtio_device_id id_table[] = {
+ 	{
+ 		.device = VIRTIO_ID_TPM,
+-- 
+2.25.1
+

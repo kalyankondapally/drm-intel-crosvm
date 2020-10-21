@@ -1,0 +1,103 @@
+From 1fa9df8460d13d899afc1c28f1091ef5394aa11d Mon Sep 17 00:00:00 2001
+From: "Michael S. Tsirkin" <mst@redhat.com>
+Date: Wed, 24 Jun 2020 19:17:04 -0400
+Subject: [PATCH 45/61] virtio: virtio_has_iommu_quirk -> virtio_has_dma_quirk
+
+Now that the corresponding feature bit has been renamed,
+rename the quirk too - it's about special ways to
+do DMA, not necessarily about the IOMMU.
+
+Signed-off-by: Michael S. Tsirkin <mst@redhat.com>
+---
+ drivers/gpu/drm/virtio/virtgpu_object.c | 2 +-
+ drivers/gpu/drm/virtio/virtgpu_vq.c     | 4 ++--
+ drivers/virtio/virtio_ring.c            | 2 +-
+ include/linux/virtio_config.h           | 4 ++--
+ tools/virtio/linux/virtio_config.h      | 4 ++--
+ 5 files changed, 8 insertions(+), 8 deletions(-)
+
+diff --git a/drivers/gpu/drm/virtio/virtgpu_object.c b/drivers/gpu/drm/virtio/virtgpu_object.c
+index 0365ac0e6481..7fabed18ce5c 100644
+--- a/drivers/gpu/drm/virtio/virtgpu_object.c
++++ b/drivers/gpu/drm/virtio/virtgpu_object.c
+@@ -142,7 +142,7 @@ static int virtio_gpu_object_shmem_init(struct virtio_gpu_device *vgdev,
+ 					struct virtio_gpu_mem_entry **ents,
+ 					unsigned int *nents)
+ {
+-	bool use_dma_api = !virtio_has_iommu_quirk(vgdev->vdev);
++	bool use_dma_api = !virtio_has_dma_quirk(vgdev->vdev);
+ 	struct virtio_gpu_object_shmem *shmem = to_virtio_gpu_shmem(bo);
+ 	struct scatterlist *sg;
+ 	int si, ret;
+diff --git a/drivers/gpu/drm/virtio/virtgpu_vq.c b/drivers/gpu/drm/virtio/virtgpu_vq.c
+index bc75d8a16838..da43d860a8a0 100644
+--- a/drivers/gpu/drm/virtio/virtgpu_vq.c
++++ b/drivers/gpu/drm/virtio/virtgpu_vq.c
+@@ -604,7 +604,7 @@ void virtio_gpu_cmd_transfer_to_host_2d(struct virtio_gpu_device *vgdev,
+ 	struct virtio_gpu_object *bo = gem_to_virtio_gpu_obj(objs->objs[0]);
+ 	struct virtio_gpu_transfer_to_host_2d *cmd_p;
+ 	struct virtio_gpu_vbuffer *vbuf;
+-	bool use_dma_api = !virtio_has_iommu_quirk(vgdev->vdev);
++	bool use_dma_api = !virtio_has_dma_quirk(vgdev->vdev);
+ 	struct virtio_gpu_object_shmem *shmem = to_virtio_gpu_shmem(bo);
+ 
+ 	if (use_dma_api)
+@@ -1075,7 +1075,7 @@ void virtio_gpu_cmd_transfer_to_host_3d(struct virtio_gpu_device *vgdev,
+ 	struct virtio_gpu_object *bo = gem_to_virtio_gpu_obj(objs->objs[0]);
+ 	struct virtio_gpu_transfer_host_3d *cmd_p;
+ 	struct virtio_gpu_vbuffer *vbuf;
+-	bool use_dma_api = !virtio_has_iommu_quirk(vgdev->vdev);
++	bool use_dma_api = !virtio_has_dma_quirk(vgdev->vdev);
+ 	struct virtio_gpu_object_shmem *shmem = to_virtio_gpu_shmem(bo);
+ 
+ 	if (use_dma_api)
+diff --git a/drivers/virtio/virtio_ring.c b/drivers/virtio/virtio_ring.c
+index 4a5da2b6185c..7d4bc9eb7fc5 100644
+--- a/drivers/virtio/virtio_ring.c
++++ b/drivers/virtio/virtio_ring.c
+@@ -240,7 +240,7 @@ static inline bool virtqueue_use_indirect(struct virtqueue *_vq,
+ 
+ static bool vring_use_dma_api(struct virtio_device *vdev)
+ {
+-	if (!virtio_has_iommu_quirk(vdev))
++	if (!virtio_has_dma_quirk(vdev))
+ 		return true;
+ 
+ 	/* Otherwise, we are left to guess. */
+diff --git a/include/linux/virtio_config.h b/include/linux/virtio_config.h
+index f2cc2a0df174..3b4eae5ac5e3 100644
+--- a/include/linux/virtio_config.h
++++ b/include/linux/virtio_config.h
+@@ -162,10 +162,10 @@ static inline bool virtio_has_feature(const struct virtio_device *vdev,
+ }
+ 
+ /**
+- * virtio_has_iommu_quirk - determine whether this device has the iommu quirk
++ * virtio_has_dma_quirk - determine whether this device has the DMA quirk
+  * @vdev: the device
+  */
+-static inline bool virtio_has_iommu_quirk(const struct virtio_device *vdev)
++static inline bool virtio_has_dma_quirk(const struct virtio_device *vdev)
+ {
+ 	/*
+ 	 * Note the reverse polarity of the quirk feature (compared to most
+diff --git a/tools/virtio/linux/virtio_config.h b/tools/virtio/linux/virtio_config.h
+index f99ae42668e0..f2640e505c4e 100644
+--- a/tools/virtio/linux/virtio_config.h
++++ b/tools/virtio/linux/virtio_config.h
+@@ -42,10 +42,10 @@ static inline void __virtio_clear_bit(struct virtio_device *vdev,
+ 	(__virtio_test_bit((dev), feature))
+ 
+ /**
+- * virtio_has_iommu_quirk - determine whether this device has the iommu quirk
++ * virtio_has_dma_quirk - determine whether this device has the DMA quirk
+  * @vdev: the device
+  */
+-static inline bool virtio_has_iommu_quirk(const struct virtio_device *vdev)
++static inline bool virtio_has_dma_quirk(const struct virtio_device *vdev)
+ {
+ 	/*
+ 	 * Note the reverse polarity of the quirk feature (compared to most
+-- 
+2.25.1
+
